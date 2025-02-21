@@ -4,6 +4,7 @@
     <router-link to="connect-the-dots">Connect The Dots</router-link>
     <router-link to="guess-the-odds">Guess The Odds</router-link>
     <router-link to="whos-that-fighter">Who's That Fighter</router-link>
+    <router-link to="temp">Temp API Test Practice</router-link>
   </nav>
 </template>
 
