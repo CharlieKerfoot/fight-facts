@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import FighterView from '@/components/FighterView.vue'
 import type { Fighter } from '../../shared/fighter'
+import { ref } from 'vue'
+
+const oddsGuess = ref(0)
 
 const fighter1: Fighter = {
   image:
@@ -14,8 +17,6 @@ const fighter1: Fighter = {
     losses: 2,
     draws: 0,
   },
-  ranked: true,
-  ranking: 'C',
 }
 
 const fighter2: Fighter = {
@@ -30,8 +31,6 @@ const fighter2: Fighter = {
     losses: 2,
     draws: 0,
   },
-  ranked: true,
-  ranking: 'C',
 }
 </script>
 
@@ -39,8 +38,9 @@ const fighter2: Fighter = {
   <div class="game">
     <FighterView :fighter="fighter1" />
     <div class="odds">
-      <input type="range" name="" id="" />
-      <p>Odds:</p>
+      <input v-model="oddsGuess" type="range" min="-2500" max="2500" step="10"/>
+      <p>Odds: {{ oddsGuess }}</p>
+      <button type="submit">Guess</button>
     </div>
     <div class="middle">
       <p>{{ fighter1.weight }} Bout</p>
@@ -66,12 +66,18 @@ const fighter2: Fighter = {
 
 
 .odds > p {
-  margin-top: 10px; /* Ensure text is always 10px below input */
+  margin-top: 5px;
   font-size: 30px;
+  margin-bottom: 10px;
+}
+
+.odds > p, .odds > button {
+  margin-left: 3px;
 }
 
 .odds {
   position: absolute;
+  top: 70vh;
 }
 
 .middle {
@@ -79,5 +85,9 @@ const fighter2: Fighter = {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+}
+
+input {
+  width: 20em;
 }
 </style>

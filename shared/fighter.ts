@@ -9,6 +9,4 @@ export interface Fighter {
     draws: number
   },
   nickname?: string,
-  ranked: boolean,
-  ranking?: number | "C"
 }

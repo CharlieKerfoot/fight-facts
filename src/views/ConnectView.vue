@@ -17,8 +17,6 @@ const fighter1: Fighter = {
     losses: 2,
     draws: 0,
   },
-  ranked: true,
-  ranking: 'C',
 }
 
 const fighter2: Fighter = {
@@ -32,8 +30,6 @@ const fighter2: Fighter = {
     draws: 0,
   },
   weight: "Flyweight",
-  ranked: true,
-  ranking: 1
 }
 
 const fighterList = ref([

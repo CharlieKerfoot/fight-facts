@@ -16,8 +16,6 @@ const fighter: Fighter = {
     draws: 0,
   },
   weight: 'Flyweight',
-  ranked: true,
-  ranking: 1,
 }
 
 const fighter1: Fighter = {
@@ -32,8 +30,6 @@ const fighter1: Fighter = {
     losses: 2,
     draws: 0,
   },
-  ranked: true,
-  ranking: 'C',
 }
 
 let id = 0
@@ -68,8 +64,6 @@ const guess = () => {
           losses: 2,
           draws: 0,
         },
-        ranked: true,
-        ranking: 'C',
       },
     })
   } else {
@@ -88,8 +82,6 @@ const guess = () => {
           losses: 2,
           draws: 0,
         },
-        ranked: true,
-        ranking: 'C',
       },
     })
   }
@@ -124,8 +116,8 @@ const guess = () => {
       <tr v-for="guess in guesses" :key="guess.id">
         <td>{{ guess.id + 1 }}</td>
         <td>
-          <Check v-if="guess.correct" :size="20" :stroke-width="2.5" />
-          <X v-else :size="20" :stroke-width="2.5"/>
+          <Check v-if="guess.correct" :size="20" :stroke-width="2.5" color="green"/>
+          <X v-else :size="20" :stroke-width="2.5" color="red"/>
         </td>
         <td>
           {{ guess.fighter.first_name }} {{ guess.fighter.nickname }} {{ guess.fighter.last_name }}
@@ -133,8 +125,6 @@ const guess = () => {
         <td>{{ guess.fighter.weight }}</td>
         <td>{{ guess.fighter.record.wins }}</td>
         <td>{{ guess.fighter.record.losses }}</td>
-        <td v-if="guess.fighter.ranked">{{ guess.fighter.ranking }}</td>
-        <td v-else>Unranked</td>
       </tr>
     </table>
     <div v-if="gameOver">

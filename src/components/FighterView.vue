@@ -5,7 +5,6 @@
       <p>{{ fighter.first_name }} "{{ fighter.nickname }}" {{ fighter.last_name }}</p>
       <div class="weight">
         <p>{{ fighter.weight }}</p>
-        <p v-if="fighter.ranked">Rank {{ fighter.ranking }}</p>
       </div>
       <p>{{ fighter.record.wins }}-{{ fighter.record.losses }}-{{ fighter.record.draws }}</p>
     </div>
