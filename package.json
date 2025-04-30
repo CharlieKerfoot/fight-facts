@@ -10,15 +10,21 @@
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
     "lint": "eslint . --fix",
-    "format": "prettier --write src/"
+    "format": "prettier --write src/",
+    "server": "tsx watch shared/server.ts",
+    "create-fighters-db": "tsx shared/create_fighters_db.ts"
   },
   "dependencies": {
+    "express": "^5.1.0",
     "lucide-vue-next": "^0.475.0",
+    "sqlite3": "^5.1.7",
+    "url": "^0.11.4",
     "vue": "^3.5.13",
     "vue-router": "^4.5.0"
   },
   "devDependencies": {
     "@tsconfig/node22": "^22.0.0",
+    "@types/express": "^5.0.1",
     "@types/node": "^22.13.1",
     "@vitejs/plugin-vue": "^5.2.1",
     "@vue/eslint-config-prettier": "^10.1.0",
@@ -29,8 +35,10 @@
     "jiti": "^2.4.2",
     "npm-run-all2": "^7.0.2",
     "prettier": "^3.4.2",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.19.4",
     "typescript": "~5.7.3",
-    "vite": "^6.0.11",
+    "vite": "^6.3.0",
     "vite-plugin-vue-devtools": "^7.7.1",
     "vue-tsc": "^2.2.0"
   }

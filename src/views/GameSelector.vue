@@ -3,33 +3,33 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
-const navigateToGame = (game: string) => {
-  router.push({ name: 'game-selector', query: { game } })
+const navigateToGame = (mode: 'daily' | 'unlimited') => {
+  router.push({ name: 'WhoView', query: { mode } })
 }
 </script>
 
 <template>
-  <main class="home">
-    <h1>Fight Facts</h1>
-    <div class="game-cards">
-      <div class="game-card" @click="navigateToGame('connect')">
-        <h2>Connect The Dots</h2>
-        <p>Connect the dots between two fighters</p>
+  <main class="game-selector">
+    <h1>Select Game Mode</h1>
+    <div class="game-modes">
+      <div class="game-mode-card" @click="navigateToGame('daily')">
+        <h2>Daily Mode</h2>
+        <p>Play once per day</p>
+        <p>Same fighter for everyone</p>
+        <p>New fighter every day</p>
       </div>
-      <div class="game-card" @click="navigateToGame('guess')">
-        <h2>Guess The Odds</h2>
-        <p>Guess the odds of a classic fight</p>
-      </div>
-      <div class="game-card" @click="navigateToGame('who')">
-        <h2>Who's That Fighter?</h2>
-        <p>Guess the UFC fighter based on their stats</p>
+      <div class="game-mode-card" @click="navigateToGame('unlimited')">
+        <h2>Unlimited Mode</h2>
+        <p>Play as much as you want</p>
+        <p>New fighter every game</p>
+        <p>Practice and improve</p>
       </div>
     </div>
   </main>
 </template>
 
 <style scoped>
-.home {
+.game-selector {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -44,14 +44,14 @@ h1 {
   color: #333;
 }
 
-.game-cards {
+.game-modes {
   display: flex;
   gap: 2rem;
   justify-content: center;
   flex-wrap: wrap;
 }
 
-.game-card {
+.game-mode-card {
   background: white;
   border-radius: 12px;
   padding: 2rem;
@@ -64,27 +64,27 @@ h1 {
     box-shadow 0.2s;
 }
 
-.game-card:hover {
+.game-mode-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
 }
 
-.game-card h2 {
+.game-mode-card h2 {
   color: #2c3e50;
   margin-bottom: 1rem;
 }
 
-.game-card p {
+.game-mode-card p {
   color: #666;
   margin: 0.5rem 0;
 }
 
 @media (max-width: 768px) {
-  .game-cards {
+  .game-modes {
     flex-direction: column;
   }
 
-  .game-card {
+  .game-mode-card {
     width: 100%;
   }
 }

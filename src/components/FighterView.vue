@@ -1,8 +1,11 @@
 <template>
   <div class="all">
-    <img :src="fighter.image" :alt="`${fighter.first_name} ${fighter.last_name} image`" />
     <div class="text">
-      <p>{{ fighter.first_name }} "{{ fighter.nickname }}" {{ fighter.last_name }}</p>
+      <p>
+        {{ fighter.first_name }}
+        <span v-if="fighter.nickname">"{{ fighter.nickname }}"</span>
+        {{ fighter.last_name }}
+      </p>
       <div class="weight">
         <p>{{ fighter.weight }}</p>
       </div>
@@ -12,18 +15,21 @@
 </template>
 
 <script setup lang="ts">
-import type { Fighter } from '../../shared/fighter.ts'
+import type { Fighter } from '../../shared/types.ts'
 defineProps<{ fighter: Fighter }>()
 </script>
 
 <style scoped>
-.all, .text {
+.all,
+.text {
   flex-direction: column;
   align-items: center;
   justify-content: center;
 }
 
-.weight, .all, .text {
+.weight,
+.all,
+.text {
   display: flex;
 }
 

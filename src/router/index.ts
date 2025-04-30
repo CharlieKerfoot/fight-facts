@@ -3,6 +3,7 @@ import HomeView from '../views/HomeView.vue'
 import ConnectView from '../views/ConnectView.vue'
 import GuessView from '../views/GuessView.vue'
 import WhoView from '../views/WhoView.vue'
+import GameSelector from '../views/GameSelector.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -15,17 +16,28 @@ const router = createRouter({
     {
       path: '/connect-the-dots',
       name: 'connect-the-dots',
-      component: ConnectView
+      component: ConnectView,
     },
     {
       path: '/guess-the-odds',
       name: 'guess-the-odds',
-      component: GuessView
+      component: GuessView,
     },
     {
       path: '/whos-that-fighter',
       name: 'whos-that-fighter',
-      component: WhoView
+      component: WhoView,
+    },
+    {
+      path: '/game-selector',
+      name: 'game-selector',
+      component: GameSelector,
+    },
+    {
+      path: '/who',
+      name: 'WhoView',
+      component: WhoView,
+      props: (route) => ({ mode: route.query.mode || 'unlimited' }),
     },
   ],
 })
