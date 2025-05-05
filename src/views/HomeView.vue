@@ -4,7 +4,13 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 
 const navigateToGame = (game: string) => {
-  router.push({ name: 'game-selector', query: { game } })
+  if (game === 'connect') {
+    router.push({ name: 'connect-the-dots' })
+  } else if (game === 'guess') {
+    router.push({ name: 'guess-the-odds' })
+  } else if (game === 'who') {
+    router.push({ name: 'game-selector', query: { game: 'who' } })
+  }
 }
 </script>
 

@@ -45,11 +45,6 @@ def retry(class_name: str, max_retries: int = 3):
             else:
                 print("Max retries reached. Skipping this page.")
 
-# Creates unique ID for the fighters
-def generate_fighter_id(first_name, last_name, birth_date):
-    unique_str = f"{first_name.lower()}_{last_name.lower()}_{birth_date}" 
-    return hashlib.md5(unique_str.encode()).hexdigest()[:10]
-
 # Get all event links for main page
 def get_event_links(last_scraped_event: str = None):
     event_links = []
@@ -117,13 +112,10 @@ for event_url in event_links:
         title = "TITLE" in bout
         gender = "Female" if "WOMEN" in bout else "Male"
 
-        # Removes unnecessary words and capitalizes each word
-        weightclass = bout.replace("WOMEN'S", "").replace("TITLE", "").strip()
-        weightclass = " ".join(word.capitalize() for word in weightclass.split())
+        
 
         # Get both fighter links
         fighter_profiles = [fighter.get_attribute("href") for fighter in driver.find_elements(By.CLASS_NAME, "b-fight-details__person-link") if fighter.get_attribute("href")]
-        ID_dict = {}
 
         for i, fighter_link in enumerate(fighter_profiles):
                 driver.get(fighter_link)
@@ -148,13 +140,8 @@ for event_url in event_links:
                     height, weight, reach, stance, birth_date = [detail.text.split(" ", 1)[1].strip() if " " in detail.text else "" for detail in fighter_details[:5]]
                 except IndexError:
                     height = weight = reach = stance = birth_date = ""
-                
-                # Fighter ID
-                fighter_ID = generate_fighter_id(first_name, last_name, birth_date)
-                ID_dict[f"fighter{i}_ID"] = fighter_ID
 
                 fighters_dict[fighter_link] = {
-                    "fighter_id": fighter_ID,
                     "first_name": first_name.capitalize(),
                     "last_name": last_name.capitalize(),
                     "nickname": nickname,
@@ -162,7 +149,6 @@ for event_url in event_links:
                     "losses": losses,
                     "draws": draws,
                     "height": height,
-                    "weight": weight,
                     "reach": reach,
                     "stance": stance,
                     "birth_date": birth_date,
@@ -171,7 +157,6 @@ for event_url in event_links:
                 print(fighters_dict[fighter_link])
         
         fights_data.append({
-            **ID_dict,
             "event": event,
             "date": date,
             "location": location,

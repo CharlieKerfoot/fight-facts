@@ -10,13 +10,61 @@ const route = useRoute()
 const router = useRouter()
 const mode = ref((route.query.mode as string) || 'unlimited')
 
+const getDailyGameState = () => {
+  const savedState = localStorage.getItem('dailyGameState')
+  if (!savedState) return null
+
+  const state = JSON.parse(savedState)
+  const today = new Date().toISOString().split('T')[0]
+
+  if (state.date === today) {
+    return {
+      ...state,
+      fighter: {
+        ...state.fighter,
+        birth_day: new Date(state.fighter.birth_day),
+      },
+      guesses: state.guesses.map((guess: { fighter: { birth_day: string } }) => ({
+        ...guess,
+        fighter: {
+          ...guess.fighter,
+          birth_day: new Date(guess.fighter.birth_day),
+        },
+      })),
+    }
+  }
+  return null
+}
+
+const saveDailyGameState = (guesses: Guess[], fighter: Fighter) => {
+  const state = {
+    date: new Date().toISOString().split('T')[0],
+    guesses: guesses.map((guess) => ({
+      ...guess,
+      fighter: {
+        ...guess.fighter,
+        birth_day: guess.fighter.birth_day.toISOString(),
+      },
+    })),
+    fighter: {
+      ...fighter,
+      birth_day: fighter.birth_day.toISOString(),
+    },
+  }
+  localStorage.setItem('dailyGameState', JSON.stringify(state))
+}
+
 const getDailyFighter = async (): Promise<Fighter> => {
   try {
     const response = await fetch('http://localhost:3000/api/daily-fighter')
     if (!response.ok) {
       throw new Error('Failed to fetch daily fighter')
     }
-    return await response.json()
+    const data = await response.json()
+    return {
+      ...data,
+      birth_day: new Date(data.birth_day),
+    }
   } catch (error) {
     console.error('Error fetching daily fighter:', error)
     throw error
@@ -29,7 +77,11 @@ const getRandomFighter = async (): Promise<Fighter> => {
     if (!response.ok) {
       throw new Error('Failed to fetch random fighter')
     }
-    return await response.json()
+    const data = await response.json()
+    return {
+      ...data,
+      birth_day: new Date(data.birth_day),
+    }
   } catch (error) {
     console.error('Error fetching random fighter:', error)
     throw error
@@ -40,7 +92,8 @@ const fighter = ref<Fighter | null>(null)
 let id = 0
 const guesses: Ref<Guess[]> = ref([])
 
-const guessCount = ref(5)
+const startingGuesses = 6
+const guessCount = ref(startingGuesses)
 const gameOver = ref(false)
 
 const input = ref('')
@@ -94,94 +147,98 @@ const isClose = (guess: number, actual: number, threshold: number): boolean => {
   return Math.abs(guess - actual) <= threshold
 }
 
-const getStatClass = (
+const getStatComparison = (
   guess: string | number | Date,
   actual: string | number | Date | undefined,
   type: string,
-): string => {
-  if (!actual) return ''
-  if (guess === actual) return 'exact'
+): { class: string; indicator: string } => {
+  if (!actual) return { class: '', indicator: '' }
 
   try {
     switch (type) {
-      case 'height':
+      case 'height': {
         const guessInches = getHeightInInches(guess as string)
         const actualInches = getHeightInInches(actual as string)
-        return isClose(guessInches, actualInches, 2) ? 'close' : ''
-      case 'weight':
+        if (guessInches === actualInches) return { class: 'exact', indicator: '✓' }
+        if (isClose(guessInches, actualInches, 2)) return { class: 'close', indicator: '~' }
+        return { class: '', indicator: guessInches < actualInches ? '↑' : '↓' }
+      }
+      case 'weight': {
         const diff = getWeightClassDiff(guess as string, actual as string)
-        return Math.abs(diff) === 1 ? 'close' : ''
-      case 'age':
-        if (!(guess instanceof Date) || !(actual instanceof Date)) return ''
-        const guessAge = Math.round((Date.now() - guess.getTime()) / 31536000000)
-        const actualAge = Math.round((Date.now() - actual.getTime()) / 31536000000)
-        return isClose(guessAge, actualAge, 2) ? 'close' : ''
-      case 'reach':
-        if (typeof guess !== 'number' || typeof actual !== 'number') return ''
-        return isClose(guess, actual, 2) ? 'close' : ''
+        if (diff === 0) return { class: 'exact', indicator: '✓' }
+        if (Math.abs(diff) === 1) return { class: 'close', indicator: '~' }
+        return { class: '', indicator: diff > 0 ? '↑' : '↓' }
+      }
+      case 'age': {
+        if (!(guess instanceof Date) || !(actual instanceof Date)) {
+          console.log('Invalid date types for age comparison')
+          return { class: '', indicator: '' }
+        }
+        const guessAge = Math.floor((Date.now() - guess.getTime()) / 31536000000)
+        const actualAge = Math.floor((Date.now() - actual.getTime()) / 31536000000)
+        if (guessAge === actualAge) return { class: 'exact', indicator: '✓' }
+        if (Math.abs(guessAge - actualAge) <= 2) return { class: 'close', indicator: '~' }
+        return { class: '', indicator: guessAge > actualAge ? '↓' : '↑' }
+      }
+      case 'reach': {
+        if (typeof guess !== 'number' || typeof actual !== 'number')
+          return { class: '', indicator: '' }
+        if (guess === actual) return { class: 'exact', indicator: '✓' }
+        if (isClose(guess, actual, 2)) return { class: 'close', indicator: '~' }
+        return { class: '', indicator: guess < actual ? '↑' : '↓' }
+      }
       case 'wins':
       case 'losses':
-      case 'draws':
-        if (typeof guess !== 'number' || typeof actual !== 'number') return ''
-        return isClose(guess, actual, 2) ? 'close' : ''
+      case 'draws': {
+        if (typeof guess !== 'number' || typeof actual !== 'number')
+          return { class: '', indicator: '' }
+        if (guess === actual) return { class: 'exact', indicator: '✓' }
+        if (isClose(guess, actual, 2)) return { class: 'close', indicator: '~' }
+        return { class: '', indicator: guess < actual ? '↑' : '↓' }
+      }
+      case 'stance': {
+        if (guess === actual) return { class: 'exact', indicator: '✓' }
+        if (
+          (guess === 'Orthodox' && actual === 'Switch') ||
+          (guess === 'Switch' && actual === 'Orthodox') ||
+          (guess === 'Southpaw' && actual === 'Switch') ||
+          (guess === 'Switch' && actual === 'Southpaw')
+        ) {
+          return { class: 'close', indicator: '~' }
+        }
+        return { class: '', indicator: '' }
+      }
       default:
-        return ''
+        return { class: '', indicator: '' }
     }
   } catch (error) {
     console.error('Error comparing stats:', error)
-    return ''
-  }
-}
-
-const getStatIndicator = (
-  guess: string | number | Date,
-  actual: string | number | Date | undefined,
-  type: string,
-): string => {
-  if (!actual) return ''
-  if (guess === actual) return '✓'
-
-  try {
-    switch (type) {
-      case 'height':
-        const guessInches = getHeightInInches(guess as string)
-        const actualInches = getHeightInInches(actual as string)
-        return guessInches < actualInches ? '↑' : '↓'
-      case 'weight':
-        const diff = getWeightClassDiff(guess as string, actual as string)
-        if (Math.abs(diff) === 1) return '~'
-        return diff > 0 ? '↑' : '↓'
-      case 'age':
-        if (!(guess instanceof Date) || !(actual instanceof Date)) return ''
-        const guessAge = Math.round((Date.now() - guess.getTime()) / 31536000000)
-        const actualAge = Math.round((Date.now() - actual.getTime()) / 31536000000)
-        if (isClose(guessAge, actualAge, 2)) return '~'
-        return guessAge < actualAge ? '↑' : '↓'
-      case 'reach':
-        if (typeof guess !== 'number' || typeof actual !== 'number') return ''
-        if (isClose(guess, actual, 2)) return '~'
-        return guess < actual ? '↑' : '↓'
-      case 'wins':
-      case 'losses':
-      case 'draws':
-        if (typeof guess !== 'number' || typeof actual !== 'number') return ''
-        if (isClose(guess, actual, 2)) return '~'
-        return guess < actual ? '↑' : '↓'
-      default:
-        return ''
-    }
-  } catch (error) {
-    console.error('Error getting stat indicator:', error)
-    return ''
+    return { class: '', indicator: '' }
   }
 }
 
 onMounted(async () => {
   try {
     if (mode.value === 'daily') {
-      fighter.value = await getDailyFighter()
+      const savedState = getDailyGameState()
+      if (savedState) {
+        fighter.value = savedState.fighter
+        guesses.value = savedState.guesses
+        gameOver.value = true
+        guessCount.value = 0
+      } else {
+        const dailyFighter = await getDailyFighter()
+        fighter.value = {
+          ...dailyFighter,
+          birth_day: new Date(dailyFighter.birth_day),
+        }
+      }
     } else {
-      fighter.value = await getRandomFighter()
+      const randomFighter = await getRandomFighter()
+      fighter.value = {
+        ...randomFighter,
+        birth_day: new Date(randomFighter.birth_day),
+      }
     }
   } catch (error) {
     console.error('Error loading fighter:', error)
@@ -191,8 +248,66 @@ onMounted(async () => {
 const guess = async () => {
   if (!input.value || !fighter.value) return
 
-  const [firstName, lastName] = input.value.split(' ')
-  if (!firstName || !lastName) return
+  // Split the input into parts, handling multiple spaces
+  const nameParts = input.value.trim().split(/\s+/)
+  if (nameParts.length < 1) return
+
+  // Handle single name (like Rongzhu)
+  if (nameParts.length === 1) {
+    try {
+      const response = await fetch(
+        `http://localhost:3000/api/fighter?firstName=${encodeURIComponent(nameParts[0])}&lastName=`,
+      )
+
+      if (!response.ok) {
+        console.error('Error fetching fighter data')
+        return
+      }
+
+      const fighterData = await response.json()
+      if (!fighterData) return
+
+      const birthDay = new Date(fighterData.birth_day)
+
+      const guessedFighter: Fighter = {
+        ...fighterData,
+        birth_day: birthDay,
+      }
+
+      const isCorrect =
+        guessedFighter.first_name === fighter.value.first_name &&
+        guessedFighter.last_name === fighter.value.last_name
+
+      guessCount.value--
+      guesses.value.push({
+        id: id++,
+        correct: isCorrect,
+        fighter: guessedFighter,
+      })
+
+      if (isCorrect) {
+        gameOver.value = true
+        if (mode.value === 'daily') {
+          saveDailyGameState(guesses.value, fighter.value)
+        }
+      } else if (guessCount.value === 0) {
+        gameOver.value = true
+        if (mode.value === 'daily') {
+          saveDailyGameState(guesses.value, fighter.value)
+        }
+      }
+
+      input.value = ''
+      return
+    } catch (error) {
+      console.error('Error making guess:', error)
+      return
+    }
+  }
+
+  // Handle names with spaces in last name (like "Machado Garry")
+  const firstName = nameParts[0]
+  const lastName = nameParts.slice(1).join(' ')
 
   try {
     const response = await fetch(
@@ -205,10 +320,13 @@ const guess = async () => {
     }
 
     const fighterData = await response.json()
-    // Convert birth_day string to Date object
+    if (!fighterData) return
+
+    const birthDay = new Date(fighterData.birth_day)
+
     const guessedFighter: Fighter = {
       ...fighterData,
-      birth_day: new Date(fighterData.birth_day),
+      birth_day: birthDay,
     }
 
     const isCorrect =
@@ -224,8 +342,14 @@ const guess = async () => {
 
     if (isCorrect) {
       gameOver.value = true
+      if (mode.value === 'daily') {
+        saveDailyGameState(guesses.value, fighter.value)
+      }
     } else if (guessCount.value === 0) {
       gameOver.value = true
+      if (mode.value === 'daily') {
+        saveDailyGameState(guesses.value, fighter.value)
+      }
     }
 
     input.value = ''
@@ -241,21 +365,67 @@ const handleSuggestionSelect = (selectedFighter: { firstName: string; lastName: 
 const startNewGame = async () => {
   if (mode.value === 'unlimited') {
     try {
-      fighter.value = await getRandomFighter()
+      const randomFighter = await getRandomFighter()
+      fighter.value = {
+        ...randomFighter,
+        birth_day: new Date(randomFighter.birth_day),
+      }
       guesses.value = []
-      guessCount.value = 5
+      guessCount.value = startingGuesses
       gameOver.value = false
       input.value = ''
+      id = 0
     } catch (error) {
       console.error('Error starting new game:', error)
     }
   }
 }
 
-const toggleMode = () => {
+const toggleMode = async () => {
   const newMode = mode.value === 'daily' ? 'unlimited' : 'daily'
   mode.value = newMode
   router.push({ query: { mode: newMode } })
+
+  // Reset all game state
+  guesses.value = []
+  guessCount.value = startingGuesses
+  gameOver.value = false
+  input.value = ''
+  id = 0
+
+  try {
+    if (newMode === 'daily') {
+      const savedState = getDailyGameState()
+      if (savedState) {
+        fighter.value = savedState.fighter
+        guesses.value = savedState.guesses
+        gameOver.value = true
+        guessCount.value = 0
+      } else {
+        const dailyFighter = await getDailyFighter()
+        fighter.value = {
+          ...dailyFighter,
+          birth_day: new Date(dailyFighter.birth_day),
+        }
+      }
+    } else {
+      const randomFighter = await getRandomFighter()
+      fighter.value = {
+        ...randomFighter,
+        birth_day: new Date(randomFighter.birth_day),
+      }
+    }
+  } catch (error) {
+    console.error('Error resetting game:', error)
+  }
+}
+
+const giveUp = () => {
+  if (!fighter.value) return
+  gameOver.value = true
+  if (mode.value === 'daily') {
+    saveDailyGameState(guesses.value, fighter.value)
+  }
 }
 </script>
 
@@ -264,15 +434,25 @@ const toggleMode = () => {
     <header class="page-header">
       <h1>Guess The Fighter</h1>
       <div class="separator"></div>
-      <button class="mode-toggle" @click="toggleMode" :class="{ active: mode === 'daily' }">
-        {{ mode === 'daily' ? 'Daily Mode' : 'Unlimited Mode' }}
-      </button>
+      <div class="header-buttons">
+        <button class="mode-toggle" @click="toggleMode" :class="{ active: mode === 'daily' }">
+          {{ mode === 'daily' ? 'Daily Mode' : 'Unlimited Mode' }}
+        </button>
+        <button class="give-up" @click="giveUp" v-if="!gameOver">Give Up</button>
+      </div>
     </header>
+    <div v-if="mode === 'daily' && gameOver" class="daily-status">
+      <p>You've already played today's game!</p>
+      <p v-if="guesses.length > 0">
+        You {{ guesses[guesses.length - 1].correct ? 'won' : 'lost' }} in
+        {{ guesses.length }} guess{{ guesses.length === 1 ? '' : 'es' }}.
+      </p>
+    </div>
     <form @submit.prevent="guess" class="search-form" v-if="!gameOver">
       <SearchBar @suggestion-selected="handleSuggestionSelect" />
       <button type="submit">Submit</button>
     </form>
-    <div class="guesses-left">
+    <div class="guesses-left" v-if="!gameOver || mode === 'unlimited'">
       <p>{{ guessCount }} Guesses Left</p>
     </div>
     <div class="guesses-table">
@@ -298,40 +478,54 @@ const toggleMode = () => {
               <Check v-if="guess.correct" :size="20" :stroke-width="2.5" color="green" />
               <X v-else :size="20" :stroke-width="2.5" color="red" />
             </td>
-            <td>
+            <td :class="{ exact: guess.correct }">
               {{ guess.fighter.first_name }}
               <span v-if="guess.fighter.nickname">"{{ guess.fighter.nickname }}"</span>
               {{ guess.fighter.last_name }}
             </td>
-            <td :class="getStatClass(guess.fighter.birth_day, fighter?.birth_day, 'age')">
-              {{ Math.round((Date.now() - guess.fighter.birth_day.getTime()) / 31536000000) }}
-              {{ getStatIndicator(guess.fighter.birth_day, fighter?.birth_day, 'age') }}
+            <td
+              :class="getStatComparison(guess.fighter.birth_day, fighter?.birth_day, 'age').class"
+            >
+              {{ Math.floor((Date.now() - guess.fighter.birth_day.getTime()) / 31536000000) }}
+              {{ getStatComparison(guess.fighter.birth_day, fighter?.birth_day, 'age').indicator }}
             </td>
-            <td :class="getStatClass(guess.fighter.weight, fighter?.weight, 'weight')">
+            <td :class="getStatComparison(guess.fighter.weight, fighter?.weight, 'weight').class">
               {{ guess.fighter.weight }}
-              {{ getStatIndicator(guess.fighter.weight, fighter?.weight, 'weight') }}
-            </td>
-            <td :class="getStatClass(guess.fighter.record.wins, fighter?.record.wins, 'wins')">
-              {{ guess.fighter.record.wins }}
-              {{ getStatIndicator(guess.fighter.record.wins, fighter?.record.wins, 'wins') }}
+              {{ getStatComparison(guess.fighter.weight, fighter?.weight, 'weight').indicator }}
             </td>
             <td
-              :class="getStatClass(guess.fighter.record.losses, fighter?.record.losses, 'losses')"
+              :class="
+                getStatComparison(guess.fighter.record.wins, fighter?.record.wins, 'wins').class
+              "
+            >
+              {{ guess.fighter.record.wins }}
+              {{
+                getStatComparison(guess.fighter.record.wins, fighter?.record.wins, 'wins').indicator
+              }}
+            </td>
+            <td
+              :class="
+                getStatComparison(guess.fighter.record.losses, fighter?.record.losses, 'losses')
+                  .class
+              "
             >
               {{ guess.fighter.record.losses }}
-              {{ getStatIndicator(guess.fighter.record.losses, fighter?.record.losses, 'losses') }}
+              {{
+                getStatComparison(guess.fighter.record.losses, fighter?.record.losses, 'losses')
+                  .indicator
+              }}
             </td>
-            <td :class="getStatClass(guess.fighter.stance, fighter?.stance, 'stance')">
+            <td :class="getStatComparison(guess.fighter.stance, fighter?.stance, 'stance').class">
               {{ guess.fighter.stance }}
-              {{ getStatIndicator(guess.fighter.stance, fighter?.stance, 'stance') }}
+              {{ getStatComparison(guess.fighter.stance, fighter?.stance, 'stance').indicator }}
             </td>
-            <td :class="getStatClass(guess.fighter.height, fighter?.height, 'height')">
+            <td :class="getStatComparison(guess.fighter.height, fighter?.height, 'height').class">
               {{ guess.fighter.height }}
-              {{ getStatIndicator(guess.fighter.height, fighter?.height, 'height') }}
+              {{ getStatComparison(guess.fighter.height, fighter?.height, 'height').indicator }}
             </td>
-            <td :class="getStatClass(guess.fighter.reach, fighter?.reach, 'reach')">
+            <td :class="getStatComparison(guess.fighter.reach, fighter?.reach, 'reach').class">
               {{ guess.fighter.reach }}"
-              {{ getStatIndicator(guess.fighter.reach, fighter?.reach, 'reach') }}
+              {{ getStatComparison(guess.fighter.reach, fighter?.reach, 'reach').indicator }}
             </td>
           </tr>
         </tbody>
@@ -527,5 +721,46 @@ td .indicator {
   top: 50%;
   transform: translateY(-50%);
   font-size: 0.8em;
+}
+
+.daily-status {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1rem 0;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.daily-status p {
+  margin: 0.5rem 0;
+  font-size: 1.1rem;
+  color: #333;
+}
+
+.daily-status p:first-child {
+  font-weight: bold;
+  color: #4caf50;
+}
+
+.header-buttons {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.give-up {
+  padding: 0.5rem 1rem;
+  background-color: #f44336;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s;
+}
+
+.give-up:hover {
+  background-color: #d32f2f;
 }
 </style>

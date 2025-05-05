@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 
 const navigateToGame = (mode: 'daily' | 'unlimited') => {
-  router.push({ name: 'WhoView', query: { mode } })
+  router.push({ name: 'whos-that-fighter', query: { mode } })
 }
 </script>
 

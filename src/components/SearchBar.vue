@@ -40,7 +40,6 @@ const hideSuggestions = () => {
   }, 200)
 }
 
-// Debounce the search to avoid too many API calls
 let searchTimeout: ReturnType<typeof setTimeout>
 watch(input, () => {
   clearTimeout(searchTimeout)
@@ -63,7 +62,7 @@ watch(input, () => {
         class="suggestion-item"
         @mousedown="selectSuggestion(fighter)"
       >
-        {{ fighter.firstName }} {{ fighter.lastName }}
+        {{ fighter.firstName }} {{ fighter.lastName || '' }}
       </div>
     </div>
   </div>

@@ -33,10 +33,6 @@ defineProps<{ fighter: Fighter }>()
   display: flex;
 }
 
-.weight > p {
-  margin-right: 1em;
-}
-
 p {
   margin-bottom: 10px;
   margin-top: 5px;

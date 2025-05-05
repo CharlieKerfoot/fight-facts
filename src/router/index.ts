@@ -27,17 +27,12 @@ const router = createRouter({
       path: '/whos-that-fighter',
       name: 'whos-that-fighter',
       component: WhoView,
+      props: (route) => ({ mode: route.query.mode || 'unlimited' }),
     },
     {
       path: '/game-selector',
       name: 'game-selector',
       component: GameSelector,
-    },
-    {
-      path: '/who',
-      name: 'WhoView',
-      component: WhoView,
-      props: (route) => ({ mode: route.query.mode || 'unlimited' }),
     },
   ],
 })
