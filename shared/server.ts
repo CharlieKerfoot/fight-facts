@@ -26,9 +26,10 @@ app.get('/api/random-fighter', db.getRandomFighter as RequestHandler)
 
 app.get('/api/daily-fighter', db.getDailyFighter as RequestHandler)
 
-// New endpoints for Connect the Dots game
 app.get('/api/connect/random-pair', db.getRandomFighterPair as RequestHandler)
+
 app.get('/api/connect/check-fight', db.checkFight as RequestHandler)
+
 app.get('/api/connect/get-opponents', db.getFighterOpponents as RequestHandler)
 
 app.listen(PORT, () => {

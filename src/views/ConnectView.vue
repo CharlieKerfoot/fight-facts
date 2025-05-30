@@ -56,23 +56,6 @@ const checkFight = async (fighter1: Fighter, fighter2: Fighter) => {
   }
 }
 
-const getFighterOpponents = async (fighter: Fighter) => {
-  try {
-    const response = await fetch(
-      `http://localhost:3000/api/connect/get-opponents?firstName=${encodeURIComponent(
-        fighter.first_name,
-      )}&lastName=${encodeURIComponent(fighter.last_name)}`,
-    )
-    if (!response.ok) {
-      throw new Error('Failed to fetch opponents')
-    }
-    return await response.json()
-  } catch (error) {
-    console.error('Error fetching opponents:', error)
-    return []
-  }
-}
-
 const handleSuggestionSelect = async (selectedFighter: { firstName: string; lastName: string }) => {
   if (!currentFighter.value) return
 
@@ -141,10 +124,12 @@ onMounted(async () => {
           <h2>Start</h2>
           <FighterView v-if="startFighter" :fighter="startFighter" />
         </div>
-        <div class="path">
-          <div v-for="(fighter, index) in path" :key="index" class="path-item">
-            <FighterView :fighter="fighter" />
-            <ArrowRight v-if="index < path.length - 1" :size="24" />
+        <div class="path-container">
+          <div class="path">
+            <div v-for="(fighter, index) in path" :key="index" class="path-item">
+              <FighterView :fighter="fighter" />
+              <ArrowRight v-if="index < path.length - 1" :size="24" class="arrow" />
+            </div>
           </div>
         </div>
         <div class="fighter-card">
@@ -174,8 +159,9 @@ onMounted(async () => {
   flex-direction: column;
   align-items: center;
   padding: 2rem;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
+  min-height: 100vh;
 }
 
 .page-header {
@@ -218,9 +204,11 @@ onMounted(async () => {
 
 .fighters {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
   width: 100%;
-  gap: 2rem;
+  gap: 1rem;
+  height: 400px;
+  margin-bottom: 1rem;
 }
 
 .fighter-card {
@@ -233,22 +221,37 @@ onMounted(async () => {
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   min-width: 200px;
+  max-width: 200px;
+  height: 100%;
+}
+
+.path-container {
+  flex: 1;
+  height: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 1rem 0;
 }
 
 .path {
-  flex: 1;
   display: flex;
-  flex-direction: column;
   align-items: center;
   gap: 1rem;
-  padding: 1rem;
-  overflow-x: auto;
+  height: 100%;
+  padding: 0 1rem;
 }
 
 .path-item {
   display: flex;
   align-items: center;
   gap: 1rem;
+  min-width: 200px;
+  max-width: 200px;
+}
+
+.arrow {
+  color: #666;
+  flex-shrink: 0;
 }
 
 .search-container {
@@ -284,11 +287,32 @@ h1 {
 h2 {
   font-size: 1.5rem;
   color: #2c3e50;
+  margin: 0;
 }
 
 h3 {
   font-size: 1.2rem;
   color: #2c3e50;
   text-align: center;
+  margin: 0;
+}
+
+/* Customize scrollbar for path container */
+.path-container::-webkit-scrollbar {
+  height: 8px;
+}
+
+.path-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.path-container::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.path-container::-webkit-scrollbar-thumb:hover {
+  background: #666;
 }
 </style>

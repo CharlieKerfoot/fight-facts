@@ -14,7 +14,7 @@ import hashlib
 options = Options() 
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
-options.add_argument("--headless")
+# options.add_argument("--headless")
 
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 wait = WebDriverWait(driver, 45)
@@ -83,8 +83,14 @@ for event_url in event_links:
         driver.get(fight_url)
         retry("b-fight-details__person-link", 3)
 
-        # Draw
-        wasDraw = driver.find_element(By.CLASS_NAME, "b-fight-details__person-status_style_gray").text.strip() == "D"
+        #Winner
+        result = driver.find_elements(By.CLASS_NAME, "b-fight-details__person-status")[0].text.strip()
+        if (result == 'D'):
+            winner = 'draw'
+        elif (result == 'W'):
+            winner = 'fighter_0'
+        else:
+            winner = 'fighter_1'
 
         # Event Name
         event = driver.find_element(By.CLASS_NAME, "b-link").text
@@ -112,58 +118,22 @@ for event_url in event_links:
         title = "TITLE" in bout
         gender = "Female" if "WOMEN" in bout else "Male"
 
-        
-
         # Get both fighter links
-        fighter_profiles = [fighter.get_attribute("href") for fighter in driver.find_elements(By.CLASS_NAME, "b-fight-details__person-link") if fighter.get_attribute("href")]
+        fighters = [fighter.text for fighter in driver.find_elements(By.CLASS_NAME, "b-fight-details__person-link")]
 
-        for i, fighter_link in enumerate(fighter_profiles):
-                driver.get(fighter_link)
-                retry("b-content__Nickname", 3)
-
-                # Fighter Name
-                name = driver.find_element(By.CLASS_NAME, "b-content__title-highlight").text.strip()
-                first_name, last_name = name.split(" ", 1) if " " in name else (name, "")
-
-                # Nickname
-                nickname_element = driver.find_element(By.CLASS_NAME, "b-content__Nickname")
-                nickname = nickname_element.text.strip() if nickname_element else ""
-                nickname = " ".join(word.capitalize() for word in nickname.split())
-
-                # Record
-                record = driver.find_element(By.CLASS_NAME, "b-content__title-record").text.split(" ")[1]
-                wins, losses, draws = record.split("-")
-
-                #Fighter Details
-                fighter_details = driver.find_elements(By.CLASS_NAME, "b-list__box-list-item_type_block")
-                try:
-                    height, weight, reach, stance, birth_date = [detail.text.split(" ", 1)[1].strip() if " " in detail.text else "" for detail in fighter_details[:5]]
-                except IndexError:
-                    height = weight = reach = stance = birth_date = ""
-
-                fighters_dict[fighter_link] = {
-                    "first_name": first_name.capitalize(),
-                    "last_name": last_name.capitalize(),
-                    "nickname": nickname,
-                    "wins": wins,
-                    "losses": losses,
-                    "draws": draws,
-                    "height": height,
-                    "reach": reach,
-                    "stance": stance,
-                    "birth_date": birth_date,
-                }
-
-                print(fighters_dict[fighter_link])
+        fighter0_first_name, fighter0_last_name = fighters[0].split(" ", 1) if " " in fighters[0] else (fighters[0], "")
+        fighter1_first_name, fighter1_last_name = fighters[1].split(" ", 1) if " " in fighters[1] else (fighters[1], "")
         
         fights_data.append({
+            "fighter_0_first_name": fighter0_first_name,
+            "fighter_0_last_name": fighter0_last_name,
+            "fighter_1_first_name": fighter1_first_name,
+            "fighter_1_last_name": fighter1_last_name,
+            'winner': winner,
             "event": event,
             "date": date,
             "location": location,
-            "gender": gender,
-            "weight": weightclass,
             "title": title,
-            "wasDraw": wasDraw,
             "method": method,
             "rounds": num_rounds,
             "fight_time": end_time,
@@ -172,10 +142,7 @@ for event_url in event_links:
 if event_links:
     with open("last_scraped_event.txt", "w") as f:
         f.write(event_links[0])
-
-fighters_df = pd.DataFrame(list(fighters_dict.values()))
-fighters_df.to_csv("fighters.csv", mode="a", index=False, header=not os.path.isfile("fighters.csv"))
-
+        
 fights_df = pd.DataFrame(fights_data)
 fights_df.to_csv("ufc.csv", mode='a', index=False, header=not os.path.isfile("ufc.csv"))
 

@@ -145,6 +145,7 @@ export const searchFighters = (req: Request, res: Response) => {
     `SELECT DISTINCT first_name, last_name
      FROM fighters
      WHERE ${whereClause}
+     AND weight IN ('115 lbs.', '125 lbs.', '135 lbs.', '145 lbs.', '155 lbs.', '170 lbs.', '185 lbs.', '205 lbs.')
      ORDER BY
        CASE
          WHEN first_name LIKE ? AND (last_name IS NULL OR last_name = '') THEN 1
@@ -172,45 +173,50 @@ export const searchFighters = (req: Request, res: Response) => {
 }
 
 export const getRandomFighter = (req: Request, res: Response) => {
-  fightersDb.get(`SELECT * FROM fighters ORDER BY RANDOM() LIMIT 1`, (err, row: FighterRow) => {
-    if (err) {
-      console.error('Error fetching random fighter:', err)
-      return res.status(500).json({ error: 'Database error' })
-    }
-    if (!row) {
-      return res.status(404).json({ error: 'No fighters found' })
-    }
+  fightersDb.get(
+    `SELECT * FROM fighters
+     WHERE weight IN ('115 lbs.', '125 lbs.', '135 lbs.', '145 lbs.', '155 lbs.', '170 lbs.', '185 lbs.', '205 lbs.')
+     ORDER BY RANDOM() LIMIT 1`,
+    (err, row: FighterRow) => {
+      if (err) {
+        console.error('Error fetching random fighter:', err)
+        return res.status(500).json({ error: 'Database error' })
+      }
+      if (!row) {
+        return res.status(404).json({ error: 'No fighters found' })
+      }
 
-    const fighter = {
-      first_name: row.first_name,
-      last_name: row.last_name,
-      nickname: row.nickname || '',
-      female: false,
-      record: {
-        wins: row.wins,
-        losses: row.losses,
-        draws: row.draws,
-      },
-      weight: row.weight || 'Unknown',
-      stance: row.stance || 'Unknown',
-      birth_day: new Date(row.birth_date || Date.now()),
-      reach: parseInt(row.reach || '0'),
-      height: row.height || 'Unknown',
-    }
+      const fighter = {
+        first_name: row.first_name,
+        last_name: row.last_name,
+        nickname: row.nickname || '',
+        female: false,
+        record: {
+          wins: row.wins,
+          losses: row.losses,
+          draws: row.draws,
+        },
+        weight: row.weight || 'Unknown',
+        stance: row.stance || 'Unknown',
+        birth_day: new Date(row.birth_date || Date.now()),
+        reach: parseInt(row.reach || '0'),
+        height: row.height || 'Unknown',
+      }
 
-    res.json(fighter)
-  })
+      res.json(fighter)
+    },
+  )
 }
 
 export const getDailyFighter = (req: Request, res: Response) => {
   const today = new Date().toISOString().split('T')[0]
-
   const seed = parseInt(today.replace(/-/g, ''))
 
   fightersDb.get(
     `SELECT * FROM fighters
+     WHERE weight IN ('115 lbs.', '125 lbs.', '135 lbs.', '145 lbs.', '155 lbs.', '170 lbs.', '185 lbs.', '205 lbs.')
      ORDER BY (first_name || last_name)
-     LIMIT 1 OFFSET (${seed} % (SELECT COUNT(*) FROM fighters))`,
+     LIMIT 1 OFFSET (${seed} % (SELECT COUNT(*) FROM fighters WHERE weight IN ('115 lbs.', '125 lbs.', '135 lbs.', '145 lbs.', '155 lbs.', '170 lbs.', '185 lbs.', '205 lbs.')))`,
     (err, row: FighterRow) => {
       if (err) {
         console.error('Error fetching daily fighter:', err)
@@ -285,13 +291,17 @@ export const checkFight = (req: Request, res: Response) => {
 
   fightsDb.get(
     `SELECT * FROM ufc
-     WHERE (R_fighter = ? AND B_fighter = ?)
-     OR (R_fighter = ? AND B_fighter = ?)`,
+     WHERE (fighter0_first_name = ? AND fighter0_last_name = ? AND fighter1_first_name = ? AND fighter1_last_name = ?)
+     OR (fighter0_first_name = ? AND fighter0_last_name = ? AND fighter1_first_name = ? AND fighter1_last_name = ?)`,
     [
-      `${fighter1FirstName} ${fighter1LastName}`,
-      `${fighter2FirstName} ${fighter2LastName}`,
-      `${fighter2FirstName} ${fighter2LastName}`,
-      `${fighter1FirstName} ${fighter1LastName}`,
+      fighter1FirstName,
+      fighter1LastName,
+      fighter2FirstName,
+      fighter2LastName,
+      fighter2FirstName,
+      fighter2LastName,
+      fighter1FirstName,
+      fighter1LastName,
     ],
     (err, row) => {
       if (err) {
@@ -322,7 +332,7 @@ export const getFighterOpponents = (req: Request, res: Response) => {
      FROM ufc
      WHERE R_fighter = ? OR B_fighter = ?`,
     [fullName, fullName, fullName],
-    (err, rows) => {
+    (err, rows: { opponent: string }[]) => {
       if (err) {
         console.error('Error fetching opponents:', err)
         return res.status(500).json({ error: 'Database error' })

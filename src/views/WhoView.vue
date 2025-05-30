@@ -3,12 +3,58 @@ import FighterView from '@/components/FighterView.vue'
 import SearchBar from '@/components/SearchBar.vue'
 import type { Fighter, Guess } from '../../shared/types.ts'
 import { ref, type Ref, onMounted } from 'vue'
-import { Check, X } from 'lucide-vue-next'
+import { Check, X, HelpCircle } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
 const router = useRouter()
 const mode = ref((route.query.mode as string) || 'unlimited')
+
+const getDailyStreak = () => {
+  const savedStreak = localStorage.getItem('dailyStreak')
+  if (!savedStreak) return { current: 0, longest: 0 }
+  return JSON.parse(savedStreak)
+}
+
+const updateDailyStreak = (won: boolean) => {
+  const { current, longest } = getDailyStreak()
+  const today = new Date().toISOString().split('T')[0]
+  const lastPlayed = localStorage.getItem('lastPlayedDate')
+
+  if (lastPlayed === today) return // Already played today
+
+  const newCurrent = won ? current + 1 : 0
+  const newLongest = Math.max(longest, newCurrent)
+
+  localStorage.setItem(
+    'dailyStreak',
+    JSON.stringify({
+      current: newCurrent,
+      longest: newLongest,
+    }),
+  )
+  localStorage.setItem('lastPlayedDate', today)
+}
+
+const getUnlimitedStreak = () => {
+  const savedStreak = localStorage.getItem('unlimitedStreak')
+  if (!savedStreak) return { current: 0, longest: 0 }
+  return JSON.parse(savedStreak)
+}
+
+const updateUnlimitedStreak = (won: boolean) => {
+  const { current, longest } = getUnlimitedStreak()
+  const newCurrent = won ? current + 1 : 0
+  const newLongest = Math.max(longest, newCurrent)
+
+  localStorage.setItem(
+    'unlimitedStreak',
+    JSON.stringify({
+      current: newCurrent,
+      longest: newLongest,
+    }),
+  )
+}
 
 const getDailyGameState = () => {
   const savedState = localStorage.getItem('dailyGameState')
@@ -217,6 +263,28 @@ const getStatComparison = (
   }
 }
 
+const checkFight = async (fighter1: Fighter, fighter2: Fighter): Promise<boolean> => {
+  try {
+    const response = await fetch(
+      `http://localhost:3000/api/connect/check-fight?fighter1FirstName=${encodeURIComponent(
+        fighter1.first_name,
+      )}&fighter1LastName=${encodeURIComponent(
+        fighter1.last_name,
+      )}&fighter2FirstName=${encodeURIComponent(
+        fighter2.first_name,
+      )}&fighter2LastName=${encodeURIComponent(fighter2.last_name)}`,
+    )
+    if (!response.ok) {
+      throw new Error('Failed to check fight')
+    }
+    const { fought } = await response.json()
+    return fought
+  } catch (error) {
+    console.error('Error checking fight:', error)
+    return false
+  }
+}
+
 onMounted(async () => {
   try {
     if (mode.value === 'daily') {
@@ -278,22 +346,31 @@ const guess = async () => {
         guessedFighter.first_name === fighter.value.first_name &&
         guessedFighter.last_name === fighter.value.last_name
 
+      const hasFought = await checkFight(guessedFighter, fighter.value)
+
       guessCount.value--
       guesses.value.push({
         id: id++,
         correct: isCorrect,
         fighter: guessedFighter,
+        hasFought,
       })
 
       if (isCorrect) {
         gameOver.value = true
         if (mode.value === 'daily') {
           saveDailyGameState(guesses.value, fighter.value)
+          updateDailyStreak(true)
+        } else {
+          updateUnlimitedStreak(true)
         }
       } else if (guessCount.value === 0) {
         gameOver.value = true
         if (mode.value === 'daily') {
           saveDailyGameState(guesses.value, fighter.value)
+          updateDailyStreak(false)
+        } else {
+          updateUnlimitedStreak(false)
         }
       }
 
@@ -333,22 +410,31 @@ const guess = async () => {
       guessedFighter.first_name === fighter.value.first_name &&
       guessedFighter.last_name === fighter.value.last_name
 
+    const hasFought = await checkFight(guessedFighter, fighter.value)
+
     guessCount.value--
     guesses.value.push({
       id: id++,
       correct: isCorrect,
       fighter: guessedFighter,
+      hasFought,
     })
 
     if (isCorrect) {
       gameOver.value = true
       if (mode.value === 'daily') {
         saveDailyGameState(guesses.value, fighter.value)
+        updateDailyStreak(true)
+      } else {
+        updateUnlimitedStreak(true)
       }
     } else if (guessCount.value === 0) {
       gameOver.value = true
       if (mode.value === 'daily') {
         saveDailyGameState(guesses.value, fighter.value)
+        updateDailyStreak(false)
+      } else {
+        updateUnlimitedStreak(false)
       }
     }
 
@@ -425,6 +511,9 @@ const giveUp = () => {
   gameOver.value = true
   if (mode.value === 'daily') {
     saveDailyGameState(guesses.value, fighter.value)
+    updateDailyStreak(false)
+  } else {
+    updateUnlimitedStreak(false)
   }
 }
 </script>
@@ -433,6 +522,25 @@ const giveUp = () => {
   <main class="who-view">
     <header class="page-header">
       <h1>Guess The Fighter</h1>
+      <div class="help-icon">
+        <HelpCircle :size="24" :stroke-width="2" />
+        <div class="tooltip">
+          <h3>How to Play</h3>
+          <p>Guess the UFC fighter in 6 tries!</p>
+          <ul>
+            <li><span class="exact">Green</span> means exact match</li>
+            <li><span class="close">Yellow</span> means close match</li>
+            <li>Age: Yellow if within 2 years</li>
+            <li>Weight: Yellow if within 1 weight class</li>
+            <li>Height: Yellow if within 2 inches</li>
+            <li>Reach: Yellow if within 2 inches</li>
+            <li>Wins/Losses: Yellow if within 2</li>
+            <li>Stance: Yellow if similar (Orthodox/Switch or Southpaw/Switch)</li>
+            <li>Fought?: Shows if your guess has fought the target fighter</li>
+          </ul>
+          <p>Arrows indicate if the target is higher (↑) or lower (↓)</p>
+        </div>
+      </div>
       <div class="separator"></div>
       <div class="header-buttons">
         <button class="mode-toggle" @click="toggleMode" :class="{ active: mode === 'daily' }">
@@ -441,6 +549,14 @@ const giveUp = () => {
         <button class="give-up" @click="giveUp" v-if="!gameOver">Give Up</button>
       </div>
     </header>
+    <div v-if="mode === 'daily'" class="streak-info">
+      <p>Current Streak: {{ getDailyStreak().current }}</p>
+      <p>Longest Streak: {{ getDailyStreak().longest }}</p>
+    </div>
+    <div v-else class="streak-info">
+      <p>Current Streak: {{ getUnlimitedStreak().current }}</p>
+      <p>Career Best: {{ getUnlimitedStreak().longest }}</p>
+    </div>
     <div v-if="mode === 'daily' && gameOver" class="daily-status">
       <p>You've already played today's game!</p>
       <p v-if="guesses.length > 0">
@@ -469,6 +585,7 @@ const giveUp = () => {
             <th>Stance</th>
             <th>Height</th>
             <th>Reach</th>
+            <th>Fought?</th>
           </tr>
         </thead>
         <tbody>
@@ -526,6 +643,10 @@ const giveUp = () => {
             <td :class="getStatComparison(guess.fighter.reach, fighter?.reach, 'reach').class">
               {{ guess.fighter.reach }}"
               {{ getStatComparison(guess.fighter.reach, fighter?.reach, 'reach').indicator }}
+            </td>
+            <td :class="{ exact: guess.hasFought }">
+              <Check v-if="guess.hasFought" :size="20" :stroke-width="2.5" color="green" />
+              <X v-else :size="20" :stroke-width="2.5" color="red" />
             </td>
           </tr>
         </tbody>
@@ -762,5 +883,103 @@ td .indicator {
 
 .give-up:hover {
   background-color: #d32f2f;
+}
+
+.help-icon {
+  position: relative;
+  cursor: pointer;
+  color: #666;
+  transition: color 0.2s;
+}
+
+.help-icon:hover {
+  color: #333;
+}
+
+.tooltip {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: white;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  width: 300px;
+  z-index: 1000;
+  display: none;
+  margin-top: 0.5rem;
+}
+
+.help-icon:hover .tooltip {
+  display: block;
+}
+
+.tooltip h3 {
+  margin: 0 0 0.5rem 0;
+  color: #333;
+  font-size: 1.1rem;
+}
+
+.tooltip p {
+  margin: 0.5rem 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.tooltip ul {
+  margin: 0.5rem 0;
+  padding-left: 1.2rem;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.tooltip li {
+  margin: 0.3rem 0;
+}
+
+.tooltip .exact {
+  background-color: #4caf50;
+  color: white;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+}
+
+.tooltip .close {
+  background-color: #ffeb3b;
+  color: #333;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+}
+
+/* Add a small triangle pointer to the tooltip */
+.tooltip::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 8px solid white;
+}
+
+.streak-info {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1rem 0;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+}
+
+.streak-info p {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #333;
+  font-weight: bold;
 }
 </style>

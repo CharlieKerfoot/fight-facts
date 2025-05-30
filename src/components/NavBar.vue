@@ -6,8 +6,6 @@ const router = useRouter()
 const navigateToRoute = (route: string) => {
   if (route === 'connect') {
     router.push({ name: 'connect-the-dots' })
-  } else if (route === 'guess') {
-    router.push({ name: 'guess-the-odds' })
   } else if (route === 'who') {
     router.push({ name: 'game-selector', query: { game: 'who' } })
   }
@@ -24,7 +22,6 @@ const navigateHome = () => {
       <div class="nav-logo" @click="navigateHome">Fight Facts</div>
       <div class="nav-links">
         <button @click="navigateToRoute('connect')" class="nav-link">Connect The Dots</button>
-        <button @click="navigateToRoute('guess')" class="nav-link">Guess The Odds</button>
         <button @click="navigateToRoute('who')" class="nav-link">Who's That Fighter</button>
       </div>
     </div>
