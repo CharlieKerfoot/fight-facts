@@ -75,7 +75,3 @@ npm run dev
 - Vue.js 3
 - TypeScript
 - Vite
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
