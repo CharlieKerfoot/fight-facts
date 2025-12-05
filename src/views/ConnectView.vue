@@ -9,6 +9,7 @@ const startFighter = ref<Fighter | null>(null)
 const targetFighter = ref<Fighter | null>(null)
 const currentFighter = ref<Fighter | null>(null)
 const path = ref<Fighter[]>([])
+const shortestPath = ref<Fighter[]>([])
 const gameOver = ref(false)
 const input = ref('')
 
@@ -90,6 +91,7 @@ const handleSuggestionSelect = async (selectedFighter: { firstName: string; last
       newFighter.last_name === targetFighter.value?.last_name
     ) {
       gameOver.value = true
+      fetchShortestPath()
     }
 
     input.value = ''
@@ -102,7 +104,24 @@ const startNewGame = async () => {
   await getRandomFighterPair()
   gameOver.value = false
   path.value = []
+  shortestPath.value = []
   input.value = ''
+}
+
+const fetchShortestPath = async () => {
+  if (!startFighter.value || !targetFighter.value) return
+
+  try {
+    const startName = `${startFighter.value.first_name} ${startFighter.value.last_name}`
+    const endName = `${targetFighter.value.first_name} ${targetFighter.value.last_name}`
+
+    const res = await fetch(`http://localhost:3000/api/connect/shortest-path?start=${encodeURIComponent(startName)}&end=${encodeURIComponent(endName)}`)
+    if (!res.ok) throw new Error('Failed to fetch shortest path')
+
+    shortestPath.value = await res.json()
+  } catch (e) {
+    console.error(e)
+  }
 }
 
 onMounted(async () => {
@@ -113,41 +132,58 @@ onMounted(async () => {
 <template>
   <main class="connect-view">
     <header class="page-header">
-      <h1>Connect The Dots</h1>
-      <div class="separator"></div>
-      <button class="new-game" @click="startNewGame">New Game</button>
+      <h1>CONNECT THE DOTS</h1>
+      <button class="new-game btn-arcade" @click="startNewGame">NEW ROUND</button>
     </header>
 
     <div class="game-container">
       <div class="fighters">
-        <div class="fighter-card">
-          <h2>Start</h2>
-          <FighterView v-if="startFighter" :fighter="startFighter" />
+        <div class="fighter-column">
+          <h2 class="player-label">PLAYER 1</h2>
+          <div class="fighter-card-wrapper">
+            <FighterView v-if="startFighter" :fighter="startFighter" />
+          </div>
         </div>
+
         <div class="path-container">
           <div class="path">
             <div v-for="(fighter, index) in path" :key="index" class="path-item">
+              <div v-if="index > 0" class="vs-badge">VS</div>
               <FighterView :fighter="fighter" />
-              <ArrowRight v-if="index < path.length - 1" :size="24" class="arrow" />
             </div>
           </div>
         </div>
-        <div class="fighter-card">
-          <h2>Target</h2>
-          <FighterView v-if="targetFighter" :fighter="targetFighter" />
+
+        <div class="fighter-column">
+          <h2 class="player-label">TARGET</h2>
+          <div class="fighter-card-wrapper">
+            <FighterView v-if="targetFighter" :fighter="targetFighter" />
+          </div>
         </div>
       </div>
 
       <div v-if="!gameOver" class="search-container">
-        <h3>
-          Find someone {{ currentFighter?.first_name }} {{ currentFighter?.last_name }} has fought
+        <h3 class="instruction-text">
+          FIND OPPONENT FOR <span class="highlight">{{ currentFighter?.first_name }} {{ currentFighter?.last_name }}</span>
         </h3>
         <SearchBar @suggestion-selected="handleSuggestionSelect" />
       </div>
 
       <div v-if="gameOver" class="result-container">
-        <h2>You Win!</h2>
-        <p>You connected the fighters in {{ path.length - 1 }} steps!</p>
+        <h2 class="win-text">K.O.!</h2>
+        <p class="win-subtext">PATH COMPLETED IN {{ path.length - 1 }} ROUNDS</p>
+
+        <div v-if="shortestPath.length > 0" class="shortest-path-section">
+          <h3>OPTIMAL PATH ({{ shortestPath.length - 1 }} ROUNDS)</h3>
+          <div class="path-container">
+            <div class="path">
+              <div v-for="(fighter, index) in shortestPath" :key="index" class="path-item">
+                <div v-if="index > 0" class="vs-badge">VS</div>
+                <FighterView :fighter="fighter" />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </main>
@@ -166,32 +202,20 @@ onMounted(async () => {
 
 .page-header {
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 1.5rem;
-  margin-bottom: 2rem;
+  margin-bottom: 3rem;
   width: 100%;
-  justify-content: center;
 }
 
-.separator {
-  height: 2rem;
-  width: 1px;
-  background-color: #ddd;
-}
-
-.new-game {
-  padding: 0.5rem 1rem;
-  background-color: #4caf50;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: background-color 0.2s;
-}
-
-.new-game:hover {
-  background-color: #45a049;
+h1 {
+  font-family: var(--font-display);
+  font-size: 3rem;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  text-shadow: 4px 4px 0 #000;
+  margin: 0;
 }
 
 .game-container {
@@ -204,54 +228,60 @@ onMounted(async () => {
 
 .fighters {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   width: 100%;
-  gap: 1rem;
-  height: 400px;
-  margin-bottom: 1rem;
+  gap: 2rem;
+  margin-bottom: 2rem;
+  padding-bottom: 20px;
 }
 
-.fighter-card {
+.fighter-column {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
-  padding: 1rem;
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  min-width: 200px;
-  max-width: 200px;
-  height: 100%;
+  min-width: 250px;
+}
+
+.player-label {
+  font-family: var(--font-arcade);
+  color: var(--color-secondary);
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  text-shadow: 2px 2px 0 #000;
+}
+
+.fighter-card-wrapper {
+  width: 100%;
 }
 
 .path-container {
   flex: 1;
-  height: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding: 1rem 0;
+  display: flex;
+  overflow-x: scroll;
+  padding: 0 1rem;
 }
 
 .path {
   display: flex;
   align-items: center;
   gap: 1rem;
-  height: 100%;
-  padding: 0 1rem;
 }
 
 .path-item {
   display: flex;
   align-items: center;
   gap: 1rem;
-  min-width: 200px;
-  max-width: 200px;
+  min-width: 300px;
+  flex-shrink: 0;
 }
 
-.arrow {
-  color: #666;
-  flex-shrink: 0;
+.vs-badge {
+  font-family: var(--font-display);
+  color: var(--color-accent);
+  font-size: 2rem;
+  font-style: italic;
+  text-shadow: 2px 2px 0 #000;
+  margin: 0 10px;
 }
 
 .search-container {
@@ -260,59 +290,116 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
+  gap: 1.5rem;
+  background: rgba(0,0,0,0.5);
+  padding: 2rem;
+  border: 4px solid var(--color-border);
+  box-shadow: 8px 8px 0 rgba(0,0,0,0.5);
+}
+
+.instruction-text {
+  font-family: var(--font-arcade);
+  color: #fff;
+  font-size: 0.8rem;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.highlight {
+  color: var(--color-primary);
+  text-transform: uppercase;
 }
 
 .result-container {
   text-align: center;
-  padding: 2rem;
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  width: 100%;
-  max-width: 800px;
+  padding: 3rem;
+  background: var(--color-bg-secondary);
+  border: 4px solid var(--color-accent);
+  box-shadow: 0 0 20px var(--color-accent);
+  animation: pulse 2s infinite;
 }
 
-.result-container h2 {
-  font-size: 2rem;
-  color: #333;
+@keyframes pulse {
+  0% { box-shadow: 0 0 20px var(--color-accent); }
+  50% { box-shadow: 0 0 40px var(--color-accent); }
+  100% { box-shadow: 0 0 20px var(--color-accent); }
+}
+
+.win-text {
+  font-family: var(--font-display);
+  font-size: 5rem;
+  color: var(--color-accent);
+  text-shadow: 4px 4px 0 #000;
+  margin: 0;
+  transform: rotate(-5deg);
+}
+
+.win-subtext {
+  font-family: var(--font-arcade);
+  color: #fff;
+  margin-top: 1rem;
+}
+
+.shortest-path-section {
+  margin-top: 3rem;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.shortest-path-section h3 {
+  font-family: var(--font-arcade);
+  color: var(--color-secondary);
   margin-bottom: 1rem;
 }
 
-h1 {
-  font-size: 2.5rem;
-  color: #333;
+/* Scrollbar */
+.fighters::-webkit-scrollbar {
+  height: 10px;
 }
 
-h2 {
-  font-size: 1.5rem;
-  color: #2c3e50;
-  margin: 0;
+.fighters::-webkit-scrollbar-track {
+  background: #000;
 }
 
-h3 {
-  font-size: 1.2rem;
-  color: #2c3e50;
-  text-align: center;
-  margin: 0;
+.fighters::-webkit-scrollbar-thumb {
+  background: var(--color-primary);
+  border: 2px solid #000;
 }
 
-/* Customize scrollbar for path container */
-.path-container::-webkit-scrollbar {
-  height: 8px;
-}
+@media (max-width: 768px) {
+  .connect-view {
+    padding: 1rem;
+  }
 
-.path-container::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 4px;
-}
+  h1 {
+    font-size: 2rem;
+    text-align: center;
+  }
 
-.path-container::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 4px;
-}
+  .fighters {
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
 
-.path-container::-webkit-scrollbar-thumb:hover {
-  background: #666;
+  .fighter-column {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .path-container {
+    width: 100%;
+    margin: 1rem 0;
+  }
+
+  .path-item {
+    min-width: 200px;
+  }
+
+  .search-container {
+    padding: 1rem;
+  }
 }
 </style>

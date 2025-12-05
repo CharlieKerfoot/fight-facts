@@ -78,11 +78,26 @@ watch(input, () => {
 
 input {
   width: 100%;
-  padding: 10px;
-  font-size: 16px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  padding: 15px;
+  font-family: var(--font-arcade);
+  font-size: 14px;
+  background: #000;
+  color: var(--color-primary);
+  border: 4px solid var(--color-border);
   outline: none;
+  text-transform: uppercase;
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.5);
+  transition: all 0.2s;
+}
+
+input:focus {
+  border-color: var(--color-secondary);
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.5);
+  transform: translate(2px, 2px);
+}
+
+input::placeholder {
+  color: #555;
 }
 
 .suggestions {
@@ -90,23 +105,40 @@ input {
   top: 100%;
   left: 0;
   right: 0;
-  background: white;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  margin-top: 4px;
+  background: var(--color-bg-secondary);
+  border: 4px solid var(--color-border);
+  border-top: none;
+  margin-top: 0;
   max-height: 300px;
   overflow-y: auto;
   z-index: 1000;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.5);
 }
 
 .suggestion-item {
-  padding: 10px;
+  padding: 15px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  font-family: var(--font-arcade);
+  font-size: 12px;
+  color: var(--color-text);
+  border-bottom: 2px solid #333;
+  transition: all 0.1s;
+  text-transform: uppercase;
+}
+
+.suggestion-item:last-child {
+  border-bottom: none;
 }
 
 .suggestion-item:hover {
-  background-color: #f0f0f0;
+  background-color: var(--color-primary);
+  color: #fff;
+  padding-left: 25px;
+}
+
+.suggestion-item:hover::before {
+  content: '►';
+  position: absolute;
+  left: 10px;
 }
 </style>

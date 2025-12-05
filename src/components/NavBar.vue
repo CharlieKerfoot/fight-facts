@@ -30,12 +30,10 @@ const navigateHome = () => {
 
 <style scoped>
 .navbar {
-  background-color: #1a1a1a;
+  background-color: var(--color-bg-secondary);
   padding: 1rem 2rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  position: sticky;
-  top: 0;
-  z-index: 1000;
+  border-bottom: 4px solid var(--color-border);
+  box-shadow: 0 4px 0 rgba(0,0,0,0.5);
 }
 
 .nav-content {
@@ -47,18 +45,19 @@ const navigateHome = () => {
 }
 
 .nav-logo {
-  color: white;
-  font-size: 1.5rem;
+  color: var(--color-primary);
+  font-family: var(--font-arcade);
+  font-size: 1.2rem;
   font-weight: bold;
   cursor: pointer;
-  transition: color 0.2s;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
+  text-transform: uppercase;
+  text-shadow: 2px 2px 0px #fff;
+  transition: transform 0.1s;
 }
 
 .nav-logo:hover {
-  color: #ff6b6b;
-  background-color: rgba(255, 255, 255, 0.1);
+  transform: scale(1.05);
+  color: var(--color-accent);
 }
 
 .nav-links {
@@ -69,41 +68,33 @@ const navigateHome = () => {
 .nav-link {
   background: none;
   border: none;
-  color: white;
-  font-size: 1rem;
+  color: var(--color-text);
+  font-family: var(--font-arcade);
+  font-size: 0.7rem;
   cursor: pointer;
   padding: 0.5rem 1rem;
-  border-radius: 4px;
-  transition: all 0.2s;
+  text-transform: uppercase;
+  transition: all 0.1s;
   position: relative;
 }
 
 .nav-link:hover {
-  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--color-secondary);
+  text-shadow: 2px 2px 0px rgba(0,0,0,0.5);
+  transform: translateX(-2px);
 }
 
-.nav-link::after {
-  content: '';
+.nav-link::before {
+  content: '>';
   position: absolute;
-  bottom: 0;
-  left: 50%;
-  width: 0;
-  height: 2px;
-  background-color: #ff6b6b;
-  transition: all 0.2s;
-  transform: translateX(-50%);
+  left: 0;
+  opacity: 0;
+  color: var(--color-primary);
+  transition: opacity 0.1s;
 }
 
-.nav-link:hover::after {
-  width: 100%;
-}
-
-.nav-link.router-link-active {
-  color: #ff6b6b;
-}
-
-.nav-link.router-link-active::after {
-  width: 100%;
+.nav-link:hover::before {
+  opacity: 1;
 }
 
 @media (max-width: 768px) {
@@ -115,10 +106,6 @@ const navigateHome = () => {
   .nav-links {
     flex-wrap: wrap;
     justify-content: center;
-  }
-
-  .nav-link {
-    padding: 0.5rem;
   }
 }
 </style>

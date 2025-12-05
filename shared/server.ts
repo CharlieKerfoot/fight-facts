@@ -32,6 +32,8 @@ app.get('/api/connect/check-fight', db.checkFight as RequestHandler)
 
 app.get('/api/connect/get-opponents', db.getFighterOpponents as RequestHandler)
 
+app.get('/api/connect/shortest-path', db.getShortestPath as RequestHandler)
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`)
 })

@@ -249,34 +249,118 @@ export const getDailyFighter = (req: Request, res: Response) => {
 }
 
 export const getRandomFighterPair = (req: Request, res: Response) => {
-  fightersDb.all(`SELECT * FROM fighters ORDER BY RANDOM() LIMIT 2`, (err, rows: FighterRow[]) => {
-    if (err) {
-      console.error('Error fetching random fighter pair:', err)
-      return res.status(500).json({ error: 'Database error' })
-    }
-    if (!rows || rows.length !== 2) {
-      return res.status(404).json({ error: 'Failed to get fighter pair' })
+  const MAX_RETRIES = 10
+
+  const attemptGetPair = (retriesLeft: number) => {
+    if (retriesLeft === 0) {
+      return res.status(500).json({ error: 'Failed to generate valid pair after multiple attempts' })
     }
 
-    const fighters = rows.map((row) => ({
-      first_name: row.first_name,
-      last_name: row.last_name,
-      nickname: row.nickname || '',
-      female: false,
-      record: {
-        wins: row.wins,
-        losses: row.losses,
-        draws: row.draws,
-      },
-      weight: row.weight || 'Unknown',
-      stance: row.stance || 'Unknown',
-      birth_day: new Date(row.birth_date || Date.now()),
-      reach: parseInt(row.reach || '0'),
-      height: row.height || 'Unknown',
-    }))
+    // 1. Get a random fighter from the fights table to ensure they have fights
+    fightsDb.get(
+      `SELECT fighter0_first_name, fighter0_last_name, fighter1_first_name, fighter1_last_name FROM ufc ORDER BY RANDOM() LIMIT 1`,
+      (err, row: { fighter0_first_name: string; fighter0_last_name: string; fighter1_first_name: string; fighter1_last_name: string }) => {
+        if (err) {
+          console.error('Error fetching random fight:', err)
+          return res.status(500).json({ error: 'Database error' })
+        }
+        if (!row) {
+          return res.status(404).json({ error: 'No fights found' })
+        }
 
-    res.json(fighters)
-  })
+        // Randomly pick fighter 0 or 1
+        const isFighter0 = Math.random() < 0.5
+        const firstName = isFighter0 ? row.fighter0_first_name : row.fighter1_first_name
+        const lastName = isFighter0 ? row.fighter0_last_name : row.fighter1_last_name
+        const startFighterName = `${firstName} ${lastName}`.trim()
+
+        const query = lastName
+            ? `SELECT * FROM fighters WHERE first_name = ? AND last_name = ? AND weight IN ('115 lbs.', '125 lbs.', '135 lbs.', '145 lbs.', '155 lbs.', '170 lbs.', '185 lbs.', '205 lbs.')`
+            : `SELECT * FROM fighters WHERE first_name = ? AND (last_name IS NULL OR last_name = '') AND weight IN ('115 lbs.', '125 lbs.', '135 lbs.', '145 lbs.', '155 lbs.', '170 lbs.', '185 lbs.', '205 lbs.')`
+
+        const params = lastName ? [firstName, lastName] : [firstName]
+
+        fightersDb.get(query, params, (err, startRow: FighterRow) => {
+          if (err || !startRow) {
+             // Fighter not in fighters table or invalid weight, retry
+             return attemptGetPair(retriesLeft - 1)
+          }
+
+          const walkLength = Math.floor(Math.random() * 4) + 3 // 3 to 6 steps
+
+          // Helper to perform the walk
+          const performWalk = (currentName: string, stepsLeft: number) => {
+            if (stepsLeft === 0) {
+              // End of walk, fetch the end fighter details
+              const [endFirst, ...endLastParts] = currentName.split(' ')
+              const endLast = endLastParts.join(' ')
+
+              const endQuery = endLast
+                ? `SELECT * FROM fighters WHERE first_name = ? AND last_name = ?`
+                : `SELECT * FROM fighters WHERE first_name = ? AND (last_name IS NULL OR last_name = '')`
+
+              const endParams = endLast ? [endFirst, endLast] : [endFirst]
+
+              fightersDb.get(endQuery, endParams, (err, endRow: FighterRow) => {
+                if (err || !endRow) {
+                   return attemptGetPair(retriesLeft - 1)
+                }
+
+                // If same fighter, retry
+                if (startRow.first_name === endRow.first_name && startRow.last_name === endRow.last_name) {
+                   return attemptGetPair(retriesLeft - 1)
+                }
+
+                // Success!
+                const formatFighter = (row: FighterRow) => ({
+                  first_name: row.first_name,
+                  last_name: row.last_name,
+                  nickname: row.nickname || '',
+                  female: false,
+                  record: {
+                    wins: row.wins,
+                    losses: row.losses,
+                    draws: row.draws,
+                  },
+                  weight: row.weight || 'Unknown',
+                  stance: row.stance || 'Unknown',
+                  birth_day: new Date(row.birth_date || Date.now()),
+                  reach: parseInt(row.reach || '0'),
+                  height: row.height || 'Unknown',
+                })
+
+                res.json([formatFighter(startRow), formatFighter(endRow)])
+              })
+              return
+            }
+
+            // Get random opponent
+            fightsDb.all(
+              `SELECT DISTINCT
+                 CASE
+                   WHEN (fighter0_first_name || ' ' || fighter0_last_name) = ? THEN (fighter1_first_name || ' ' || fighter1_last_name)
+                   ELSE (fighter0_first_name || ' ' || fighter0_last_name)
+                 END as opponent
+               FROM ufc
+               WHERE (fighter0_first_name || ' ' || fighter0_last_name) = ? OR (fighter1_first_name || ' ' || fighter1_last_name) = ?
+               ORDER BY RANDOM() LIMIT 1`,
+              [currentName, currentName, currentName],
+              (err, rows: { opponent: string }[]) => {
+                if (err || !rows || rows.length === 0) {
+                  return attemptGetPair(retriesLeft - 1)
+                }
+                performWalk(rows[0].opponent, stepsLeft - 1)
+              }
+            )
+          }
+
+          performWalk(startFighterName, walkLength)
+        })
+      }
+    )
+  }
+
+  attemptGetPair(MAX_RETRIES)
 }
 
 export const checkFight = (req: Request, res: Response) => {
@@ -326,11 +410,11 @@ export const getFighterOpponents = (req: Request, res: Response) => {
   fightsDb.all(
     `SELECT DISTINCT
        CASE
-         WHEN R_fighter = ? THEN B_fighter
-         ELSE R_fighter
+         WHEN (fighter0_first_name || ' ' || fighter0_last_name) = ? THEN (fighter1_first_name || ' ' || fighter1_last_name)
+         ELSE (fighter0_first_name || ' ' || fighter0_last_name)
        END as opponent
      FROM ufc
-     WHERE R_fighter = ? OR B_fighter = ?`,
+     WHERE (fighter0_first_name || ' ' || fighter0_last_name) = ? OR (fighter1_first_name || ' ' || fighter1_last_name) = ?`,
     [fullName, fullName, fullName],
     (err, rows: { opponent: string }[]) => {
       if (err) {
@@ -339,7 +423,8 @@ export const getFighterOpponents = (req: Request, res: Response) => {
       }
 
       const opponents = rows.map((row) => {
-        const [opponentFirstName, opponentLastName] = row.opponent.split(' ')
+        const [opponentFirstName, ...opponentLastNameParts] = row.opponent.split(' ')
+        const opponentLastName = opponentLastNameParts.join(' ')
         return {
           firstName: opponentFirstName,
           lastName: opponentLastName,
@@ -348,5 +433,126 @@ export const getFighterOpponents = (req: Request, res: Response) => {
 
       res.json(opponents)
     },
+  )
+}
+
+export const getShortestPath = (req: Request, res: Response) => {
+  const startName = req.query.start as string
+  const endName = req.query.end as string
+
+  if (!startName || !endName) {
+    return res.status(400).json({ error: 'Start and end fighters are required' })
+  }
+
+  // BFS Queue: [currentFighter, path][]
+  const queue: { name: string; path: string[] }[] = [{ name: startName, path: [startName] }]
+  const visited = new Set<string>([startName])
+
+  // We'll load the graph in chunks or on demand.
+  // To avoid N+1 query performance issues, we can try to load all fights into memory?
+  // The UFC dataset isn't THAT huge (maybe 7k fights?).
+  // Let's try loading the whole graph into memory for the BFS. It's faster than thousands of SQL queries.
+
+  fightsDb.all(
+    `SELECT fighter0_first_name, fighter0_last_name, fighter1_first_name, fighter1_last_name FROM ufc`,
+    (err, rows: { fighter0_first_name: string; fighter0_last_name: string; fighter1_first_name: string; fighter1_last_name: string }[]) => {
+      if (err) {
+        console.error('Error loading fights for BFS:', err)
+        return res.status(500).json({ error: 'Database error' })
+      }
+
+      // Build Adjacency List
+      const graph = new Map<string, string[]>()
+
+      const addEdge = (u: string, v: string) => {
+        if (!graph.has(u)) graph.set(u, [])
+        if (!graph.has(v)) graph.set(v, [])
+        graph.get(u)?.push(v)
+        graph.get(v)?.push(u)
+      }
+
+      rows.forEach(row => {
+        const fighter0 = `${row.fighter0_first_name} ${row.fighter0_last_name}`.trim()
+        const fighter1 = `${row.fighter1_first_name} ${row.fighter1_last_name}`.trim()
+        addEdge(fighter0, fighter1)
+      })
+
+      // BFS
+      while (queue.length > 0) {
+        const { name, path } = queue.shift()!
+
+        if (name === endName) {
+          // Found shortest path!
+          // Now we need to fetch details for each fighter in the path to return full objects
+          // Or just return names? The frontend probably needs full objects to display cards.
+          // Let's return names for now and let frontend fetch details or we fetch them here.
+          // Fetching details for all might be slow if path is long, but path is usually short (<6).
+
+          // Let's fetch details.
+          const placeholders = path.map(() => '(first_name = ? AND (last_name = ? OR last_name IS NULL))').join(' OR ')
+          const params: string[] = []
+          path.forEach(p => {
+            const [first, ...lastParts] = p.split(' ')
+            params.push(first, lastParts.join(' '))
+          })
+
+          // Actually, fetching by name one by one or with a big OR is tricky with the split names.
+          // Let's just return the names and let the frontend handle it or return simple objects.
+          // The user wants to see the path.
+
+          // Better: Return the list of names. The frontend can display them or fetch them.
+          // To make it nice, let's try to fetch them.
+
+          // We can use a simpler query if we assume names match.
+          // Let's just return the names for now to get the logic working,
+          // and maybe the frontend can use `FighterView` with just names?
+          // No, `FighterView` needs a `Fighter` object.
+
+          // Okay, I will fetch the fighter details.
+          const fetchFighter = (fullName: string): Promise<any> => {
+            return new Promise((resolve) => {
+               const [first, ...lastParts] = fullName.split(' ')
+               const last = lastParts.join(' ')
+               const query = last
+                 ? `SELECT * FROM fighters WHERE first_name = ? AND last_name = ?`
+                 : `SELECT * FROM fighters WHERE first_name = ? AND (last_name IS NULL OR last_name = '')`
+               const p = last ? [first, last] : [first]
+
+               fightersDb.get(query, p, (err, row: FighterRow) => {
+                 if (err || !row) resolve({ first_name: first, last_name: last, weight: 'Unknown', record: { wins: 0, losses: 0, draws: 0 } }) // Fallback
+                 else resolve({
+                    first_name: row.first_name,
+                    last_name: row.last_name,
+                    nickname: row.nickname || '',
+                    female: false,
+                    record: { wins: row.wins, losses: row.losses, draws: row.draws },
+                    weight: row.weight || 'Unknown',
+                    stance: row.stance || 'Unknown',
+                    birth_day: new Date(row.birth_date || Date.now()),
+                    reach: parseInt(row.reach || '0'),
+                    height: row.height || 'Unknown',
+                 })
+               })
+            })
+          }
+
+          Promise.all(path.map(fetchFighter)).then(fullPath => {
+            res.json(fullPath)
+          })
+          return
+        }
+
+        const neighbors = graph.get(name) || []
+        for (const neighbor of neighbors) {
+          if (!visited.has(neighbor)) {
+            visited.add(neighbor)
+            queue.push({ name: neighbor, path: [...path, neighbor] })
+          }
+        }
+      }
+
+      // No path found
+      res.status(404).json({ error: 'No path found' })
+    }
   )
 }
