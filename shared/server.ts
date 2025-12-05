@@ -20,23 +20,21 @@ app.use((req, res, next) => {
   next()
 })
 
-app.get('/api/search', db.searchFighters as RequestHandler)
+app.get('/api/search', db.searchFighters as unknown as RequestHandler)
 
-app.get('/api/fighter', db.getFighterByName as RequestHandler)
+app.get('/api/fighter', db.getFighterByName as unknown as RequestHandler)
 
-app.get('/api/random-fighter', db.getRandomFighter as RequestHandler)
+app.get('/api/random-fighter', db.getRandomFighter as unknown as RequestHandler)
 
-app.get('/api/daily-fighter', db.getDailyFighter as RequestHandler)
+app.get('/api/daily-fighter', db.getDailyFighter as unknown as RequestHandler)
 
-app.get('/api/connect/random-pair', db.getRandomFighterPair as RequestHandler)
+app.get('/api/connect/random-pair', db.getRandomFighterPair as unknown as RequestHandler)
 
-app.get('/api/connect/check-fight', db.checkFight as RequestHandler)
+app.get('/api/connect/check-fight', db.checkFight as unknown as RequestHandler)
 
-app.get('/api/connect/get-opponents', db.getFighterOpponents as RequestHandler)
+app.get('/api/connect/get-opponents', db.getFighterOpponents as unknown as RequestHandler)
 
-app.get('/api/connect/shortest-path', db.getShortestPath as RequestHandler)
-
-app.get('/api/connect/shortest-path', db.getShortestPath as RequestHandler)
+app.get('/api/connect/shortest-path', db.getShortestPath as unknown as RequestHandler)
 
 const __filename = fileURLToPath(import.meta.url)
 const isMainModule = process.argv[1] === __filename || process.argv[1].endsWith('shared/server.ts')
