@@ -20,8 +20,31 @@ interface FighterRow {
   birth_date: string | null
 }
 
-const fightersDb = new sqlite3.Database(path.join(process.cwd(), 'fighters.db'))
-const fightsDb = new sqlite3.Database(path.join(process.cwd(), 'ufcSQL.db'))
+import fs from 'fs'
+
+const DB_PATH = path.join(process.cwd(), 'fighters.db')
+const UFC_DB_PATH = path.join(process.cwd(), 'ufcSQL.db')
+
+console.log('DB_PATH:', DB_PATH)
+console.log('UFC_DB_PATH:', UFC_DB_PATH)
+console.log('DB Exists:', fs.existsSync(DB_PATH))
+console.log('UFC DB Exists:', fs.existsSync(UFC_DB_PATH))
+
+const fightersDb = new sqlite3.Database(DB_PATH, sqlite3.OPEN_READONLY, (err) => {
+  if (err) {
+    console.error('Error opening fighters database:', err.message)
+  } else {
+    console.log('Connected to the fighters database.')
+  }
+})
+
+const fightsDb = new sqlite3.Database(UFC_DB_PATH, sqlite3.OPEN_READONLY, (err) => {
+  if (err) {
+    console.error('Error opening fights database:', err.message)
+  } else {
+    console.log('Connected to the fights database.')
+  }
+})
 
 export const getFighterByName = (req: Request, res: Response) => {
   const firstName = req.query.firstName as string
