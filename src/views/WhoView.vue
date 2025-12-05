@@ -330,7 +330,7 @@ onUnmounted(() => {
             <div class="info-tooltip">
               <p>Rules:</p>
               <ul>
-                <li><span class="text-success">Green</span> = Correct Match</li>
+                <li><span class="text-success">Green</span> = Correct</li>
                 <li><span class="text-warning">Yellow</span> = Close</li>
                 <li>↑ = Higher</li>
                 <li>↓ = Lower</li>
@@ -481,8 +481,8 @@ h1 {
   transform: translateX(-50%);
   background: rgba(0, 0, 0, 0.95);
   border: 1px solid var(--color-border);
-  padding: 1rem;
-  width: 200px;
+  padding: .5rem 0 .5rem 1rem;
+  width: 225px;
   z-index: 100;
   margin-top: 10px;
   text-align: left;
