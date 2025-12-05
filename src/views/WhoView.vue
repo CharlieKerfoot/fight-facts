@@ -50,7 +50,7 @@ const updateUnlimitedStreak = (won: boolean) => {
 
 const getRandomFighter = async () => {
   try {
-    const res = await fetch('http://localhost:3000/api/random-fighter')
+    const res = await fetch('/api/random-fighter')
     if (!res.ok) throw new Error('Failed to fetch')
     const data = await res.json()
     return { ...data, birth_day: new Date(data.birth_day) }
@@ -61,7 +61,7 @@ const getRandomFighter = async () => {
 
 const getDailyFighter = async () => {
   try {
-    const res = await fetch('http://localhost:3000/api/daily-fighter')
+    const res = await fetch('/api/daily-fighter')
     if (!res.ok) throw new Error('Failed to fetch')
     const data = await res.json()
     return { ...data, birth_day: new Date(data.birth_day) }
@@ -72,7 +72,7 @@ const getDailyFighter = async () => {
 
 const checkFight = async (f1: Fighter, f2: Fighter) => {
   try {
-    const res = await fetch(`http://localhost:3000/api/connect/check-fight?fighter1FirstName=${f1.first_name}&fighter1LastName=${f1.last_name}&fighter2FirstName=${f2.first_name}&fighter2LastName=${f2.last_name}`)
+    const res = await fetch(`/api/connect/check-fight?fighter1FirstName=${f1.first_name}&fighter1LastName=${f1.last_name}&fighter2FirstName=${f2.first_name}&fighter2LastName=${f2.last_name}`)
     const data = await res.json()
     return data.fought
   } catch (e) {
@@ -113,7 +113,7 @@ const handleSuggestionSelect = async (selected: { firstName: string, lastName: s
   if (gameOver.value || !fighter.value) return
 
   try {
-    const res = await fetch(`http://localhost:3000/api/fighter?firstName=${selected.firstName}&lastName=${selected.lastName}`)
+    const res = await fetch(`/api/fighter?firstName=${selected.firstName}&lastName=${selected.lastName}`)
     const data = await res.json()
     const guessedFighter = { ...data, birth_day: new Date(data.birth_day) }
 

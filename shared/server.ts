@@ -1,5 +1,7 @@
 import express, { RequestHandler } from 'express'
 import * as db from './db'
+import { fileURLToPath } from 'url'
+import path from 'path'
 
 const app = express()
 const PORT = 3000
@@ -34,6 +36,15 @@ app.get('/api/connect/get-opponents', db.getFighterOpponents as RequestHandler)
 
 app.get('/api/connect/shortest-path', db.getShortestPath as RequestHandler)
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`)
-})
+app.get('/api/connect/shortest-path', db.getShortestPath as RequestHandler)
+
+const __filename = fileURLToPath(import.meta.url)
+const isMainModule = process.argv[1] === __filename || process.argv[1].endsWith('shared/server.ts')
+
+if (isMainModule) {
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`)
+  })
+}
+
+export default app

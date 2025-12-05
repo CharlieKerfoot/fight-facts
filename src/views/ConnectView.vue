@@ -15,7 +15,7 @@ const input = ref('')
 
 const getRandomFighterPair = async () => {
   try {
-    const response = await fetch('http://localhost:3000/api/connect/random-pair')
+    const response = await fetch('/api/connect/random-pair')
     if (!response.ok) {
       throw new Error('Failed to fetch fighter pair')
     }
@@ -38,7 +38,7 @@ const getRandomFighterPair = async () => {
 const checkFight = async (fighter1: Fighter, fighter2: Fighter) => {
   try {
     const response = await fetch(
-      `http://localhost:3000/api/connect/check-fight?fighter1FirstName=${encodeURIComponent(
+      `/api/connect/check-fight?fighter1FirstName=${encodeURIComponent(
         fighter1.first_name,
       )}&fighter1LastName=${encodeURIComponent(
         fighter1.last_name,
@@ -62,7 +62,7 @@ const handleSuggestionSelect = async (selectedFighter: { firstName: string; last
 
   try {
     const response = await fetch(
-      `http://localhost:3000/api/fighter?firstName=${encodeURIComponent(
+      `/api/fighter?firstName=${encodeURIComponent(
         selectedFighter.firstName,
       )}&lastName=${encodeURIComponent(selectedFighter.lastName)}`,
     )
@@ -115,7 +115,7 @@ const fetchShortestPath = async () => {
     const startName = `${startFighter.value.first_name} ${startFighter.value.last_name}`
     const endName = `${targetFighter.value.first_name} ${targetFighter.value.last_name}`
 
-    const res = await fetch(`http://localhost:3000/api/connect/shortest-path?start=${encodeURIComponent(startName)}&end=${encodeURIComponent(endName)}`)
+    const res = await fetch(`/api/connect/shortest-path?start=${encodeURIComponent(startName)}&end=${encodeURIComponent(endName)}`)
     if (!res.ok) throw new Error('Failed to fetch shortest path')
 
     shortestPath.value = await res.json()
