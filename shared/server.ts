@@ -1,5 +1,5 @@
 import express, { RequestHandler } from 'express'
-import * as db from './db'
+import * as db from './db.js'
 import { fileURLToPath } from 'url'
 import path from 'path'
 
