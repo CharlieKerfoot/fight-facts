@@ -4,7 +4,7 @@
   ],
   "functions": {
     "api/index.ts": {
-      "includeFiles": "**.db"
+      "includeFiles": ["fighters.db", "ufcSQL.db"]
     }
   }
 }

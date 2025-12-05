@@ -22,16 +22,39 @@ interface FighterRow {
 
 import fs from 'fs'
 
-const DB_PATH = path.join(process.cwd(), 'fighters.db')
-const UFC_DB_PATH = path.join(process.cwd(), 'ufcSQL.db')
+const findFile = (startDir: string, filename: string): string | null => {
+  const queue = [startDir]
+  const visited = new Set([startDir])
 
-console.log('DB_PATH:', DB_PATH)
-console.log('UFC_DB_PATH:', UFC_DB_PATH)
-try {
-  console.log('Files in CWD:', fs.readdirSync(process.cwd()))
-} catch (e) {
-  console.error('Error listing CWD:', e)
+  while (queue.length > 0) {
+    const currentDir = queue.shift()!
+    try {
+      const entries = fs.readdirSync(currentDir, { withFileTypes: true })
+      for (const entry of entries) {
+        const fullPath = path.join(currentDir, entry.name)
+        if (entry.isFile() && entry.name === filename) {
+          return fullPath
+        }
+        if (entry.isDirectory() && !visited.has(fullPath)) {
+          visited.add(fullPath)
+          queue.push(fullPath)
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+  return null
 }
+
+const foundFightersDbPath = findFile(process.cwd(), 'fighters.db')
+const foundUfcDbPath = findFile(process.cwd(), 'ufcSQL.db')
+
+const DB_PATH = foundFightersDbPath || path.join(process.cwd(), 'fighters.db')
+const UFC_DB_PATH = foundUfcDbPath || path.join(process.cwd(), 'ufcSQL.db')
+
+console.log('Resolved DB_PATH:', DB_PATH)
+console.log('Resolved UFC_DB_PATH:', UFC_DB_PATH)
 console.log('DB Exists:', fs.existsSync(DB_PATH))
 console.log('UFC DB Exists:', fs.existsSync(UFC_DB_PATH))
 
