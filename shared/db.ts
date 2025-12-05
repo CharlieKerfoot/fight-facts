@@ -27,6 +27,11 @@ const UFC_DB_PATH = path.join(process.cwd(), 'ufcSQL.db')
 
 console.log('DB_PATH:', DB_PATH)
 console.log('UFC_DB_PATH:', UFC_DB_PATH)
+try {
+  console.log('Files in CWD:', fs.readdirSync(process.cwd()))
+} catch (e) {
+  console.error('Error listing CWD:', e)
+}
 console.log('DB Exists:', fs.existsSync(DB_PATH))
 console.log('UFC DB Exists:', fs.existsSync(UFC_DB_PATH))
 

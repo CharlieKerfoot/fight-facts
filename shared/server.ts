@@ -20,6 +20,10 @@ app.use((req, res, next) => {
   next()
 })
 
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', env: process.env.NODE_ENV, cwd: process.cwd() })
+})
+
 app.get('/api/search', db.searchFighters as unknown as RequestHandler)
 
 app.get('/api/fighter', db.getFighterByName as unknown as RequestHandler)
