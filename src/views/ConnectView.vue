@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import FighterView from '@/components/FighterView.vue'
 import SearchBar from '@/components/SearchBar.vue'
+import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import type { Fighter } from '../../shared/types.ts'
 import { ref, onMounted } from 'vue'
-import { ArrowRight } from 'lucide-vue-next'
 
 const startFighter = ref<Fighter | null>(null)
 const targetFighter = ref<Fighter | null>(null)
@@ -12,8 +12,10 @@ const path = ref<Fighter[]>([])
 const shortestPath = ref<Fighter[]>([])
 const gameOver = ref(false)
 const input = ref('')
+const isLoading = ref(true)
 
 const getRandomFighterPair = async () => {
+  isLoading.value = true
   try {
     const response = await fetch('/api/connect/random-pair')
     if (!response.ok) {
@@ -32,6 +34,8 @@ const getRandomFighterPair = async () => {
     path.value = [startFighter.value]
   } catch (error) {
     console.error('Error loading fighter pair:', error)
+  } finally {
+    isLoading.value = false
   }
 }
 
@@ -136,7 +140,11 @@ onMounted(async () => {
       <button class="new-game btn-arcade" @click="startNewGame">NEW ROUND</button>
     </header>
 
-    <div class="game-container">
+    <div v-if="isLoading" class="loading-container">
+      <LoadingSpinner text="SEARCHING FOR FIGHTERS..." />
+    </div>
+
+    <div v-else class="game-container">
       <div class="fighters">
         <div class="fighter-column">
           <h2 class="player-label">PLAYER 1</h2>
@@ -162,7 +170,7 @@ onMounted(async () => {
         </div>
       </div>
 
-      <div v-if="!gameOver" class="search-container">
+      <div v-if="!gameOver" class="search-div">
         <h3 class="instruction-text">
           FIND OPPONENT FOR <span class="highlight">{{ currentFighter?.first_name }} {{ currentFighter?.last_name }}</span>
         </h3>
@@ -216,6 +224,14 @@ h1 {
   text-transform: uppercase;
   text-shadow: 4px 4px 0 #000;
   margin: 0;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  width: 100%;
 }
 
 .game-container {
@@ -284,7 +300,7 @@ h1 {
   margin: 0 10px;
 }
 
-.search-container {
+.search-div {
   width: 100%;
   max-width: 600px;
   display: flex;
@@ -354,7 +370,6 @@ h1 {
   margin-bottom: 1rem;
 }
 
-/* Scrollbar */
 .fighters::-webkit-scrollbar {
   height: 10px;
 }
