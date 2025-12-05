@@ -1,13 +1,13 @@
 # Fight Facts 🥊
 
-A fun and interactive UFC fighter trivia and connection game built with Vue.js. Test your knowledge of UFC fighters and their connections!
+A UFC trivia game built with Vue.js. Let's see if you are a hardcore UFC fan or just a casual...
 
 ## Features
 
 ### Connect The Dots
 
 - Find the connection between two UFC fighters
-- Discover interesting relationships between fighters through their fight history
+- Scavenge through fight histories to discover the link
 - Challenge yourself to find the shortest path between any two fighters
 
 ### Who's That Fighter?
@@ -58,24 +58,20 @@ npm run dev
 
 ### Connect The Dots
 
-1. Select two UFC fighters
-2. The game will show you the connection path between them
-3. Try to find the shortest possible connection!
+1. The game will show you two UFC fighters. The start is on the left
+2. Guess a fighter that fought the starting fighter
+3. Continue until you have made it to the end
+4. Try to find the shortest possible connection!
 
 ### Who's That Fighter?
 
 1. Choose between Daily Challenge or Unlimited Mode
-2. You'll be shown various stats about a UFC fighter
-3. Use the search bar to guess the fighter
-4. Get hints if you're stuck
-5. Try to maintain your streak!
+3. Use the search bar to guess any active or historical UFC fighter
+4. Based on the given clues, continue guessing fighters
+5. Try to guess the correct fighter in as few attempts as possible!
 
 ## Tech Stack
 
 - Vue.js 3
 - TypeScript
 - Vite
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
